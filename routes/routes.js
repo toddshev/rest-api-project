@@ -107,15 +107,15 @@ router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
     
     if (course) {
       if (course.userId !== user.id) {
-        res.sendStatus(403).end()
-      }
-    
-      await course.update(req.body);
-      res.status(204).location(`/courses/${course.id}`).end();
-    } else {
-      res.sendStatus(403).end();
-    }
-  } catch (error) {
+        res.sendStatus(403).end();
+      } else {
+        await course.update(req.body);
+        res.status(204).location(`/courses/${course.id}`).end();
+      }  
+  } else {
+    res.sendStatus(404).end();
+  } 
+ } catch (error) {
     if (error.name === 'SequelizeValidationError') {
       const errors = error.errors.map( err => err.message);
       res.status(400).json( {errors} );
@@ -134,10 +134,10 @@ router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res) =>
   if (course) {
     if (course.userId !== user.id) {
       res.sendStatus(403).end();
-    }
-        
-    await course.destroy();
-    res.sendStatus(204).end();
+    } else {
+      await course.destroy();
+      res.sendStatus(204).end();
+    }  
   } else {
       res.sendStatus(404).end();
   }
