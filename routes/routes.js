@@ -27,76 +27,114 @@ router.get('/users', authenticateUser, asyncHandler(async (req, res) => {
 
 // happy path = good
 router.post('/users', asyncHandler(async (req, res) =>{
-  //console.log(req.body.toJSON());
   const user = req.body;
-  console.log(user);
-//  await User.create(req.body);
-//  console.log(user.firstName, user.lastName, user.password);
-
-  const newUser = await User.create(req.body);
-  //    firstName: req.body.firstName,
-  //    lastName: req.body.lastName,
-  //    emailAddress: req.body.emailAddress,
-  //    password: req.body.password
-  //  });
-  res.location('/');
-  res.status(201).end()
-  //   newUser
-  // })    
-  //res.location('/');
-  //res.status(201).end();
-  //res.redirect('/');
+  
+  try{
+    await User.create(req.body);
+    res.status(201).location('/').end();
+  } catch (error) {
+    console.log(error);
+    if (
+      error.name === 'SequelizeValidationError' ||
+      error.name === 'SequelizeUniqueConstraintError'
+    ){
+      const errors = error.errors.map( (err) => err.message);
+      res.status(400).json({ errors });
+    }else {
+        throw error;
+    }
+  }  
 }));
 
 // happy path = good
 router.get('/courses', asyncHandler(async (req, res) => {
-  const courses = await Course.findAll();
+  const courses = await Course.findAll({
+    order: [[ 'createdAt', ' DESC']],
+    attributes: { exclude: ['createdAt', 'updatedAt'] },
+    include: [
+      {
+        model: User,
+        attributes: ["id", "firstName", "lastName", "emailAddress"],
+      },
+    ],
+  });
   console.log(courses);
-    res.status(200).json({ courses });
+    res.status(200).json(courses);
 }));
 
 router.get('/courses/:id', asyncHandler(async (req, res) => {
-  const course = await Course.findOne( {
-    where: {id: req.params.id} 
+  const course = await Course.findByPk(req.params.id, {
+    attributes: {exclude: ['createdAt', 'updatedAt'] },
+    include: {
+      model: User,
+      attributes: ['id', 'firstName', 'lastName', 'emailAddress'],
+    },
   });
-  res.status(200).json({ course });
+  
+  if (course) {
+    res.status(200).json({ course });
+  } else {
+    res.sendStatus(404);
+  }
 }));
 
 router.post('/courses', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
-  const course = req.body;
+  let course;
 
-  //   const {title, description,} = req.body;
-  // if (!title){
-  //   res.status(400).json( {msg: '"Title" is a required field'});
-  // }
-  // if (!description) {
-  //   res.status(400).json( {msg: '"Description" is a required field'});
-  // }
-  await Course.create(course);
+  try {
+    course = await Course.create(req.body);
+    res.status(201).location(`/courses/${course.id}`).end();
+  } catch (error) {
+    if (error.name = 'SequelizeValidationError') {
+      const errors = error.errors.map( err => err.message);
+      res.status(400).json( {errors} );
+    } else {
+      throw error;
+    }
+  }
+})
+);
   //     title: req.body.title,
   //     description: req.body.description,
   //     estimatedTime: req.body.estimatedTime,
   //     materialsNeeded: req.body.materialsNeeded,
   // });
-  res.location('/');
-  res.status(201).end();
-}));
 
 router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
+  const userId = user.id;
+  let course;
 
-  const course = await Course.findOne({ where: id == req.params.id });
-  await course.update(req.body);
-  res.status(204).end();
+  try {
+    course = await Course.findByPk(req.params.id);
+    if (course) {
+      await course.update(req.body);
+      res.status(204).location(`/courses/${course.id}`).end();
+    } else {
+      res.sendStatus(403);
+    }
+  } catch (error) {
+    if (error.name === 'SequelizeValidationError') {
+      const errors = error.errors.map( err => err.message);
+      res.status(400).json( {errors} );
+    } else {
+      throw error;
+    }
+  }
 }));
 
 router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
-  const course = Course.findOne({ where: id == req.params.id });
-  course.destroy();
+  let course;
   
-  res.status(204).end();
+  course = await Course.findByPk(req.params.id);
+  if (course) {
+    await course.destroy();
+    req.status(204).end();
+  } else {
+    res.status(403).end();
+  }
 }));
 
 module.exports = router
