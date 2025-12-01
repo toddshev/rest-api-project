@@ -16,6 +16,14 @@ module.exports = (sequelize, DataTypes) => {
           fieldName: 'userId',
          // field: 'userId',
           allowNull: false,
+          validate: {
+            notNull: {
+              msg: 'User ID is required',
+            },
+            notEmpty: {
+              msg: 'Please enter a value for "User ID"',
+            },
+          },
         },
       })
     }
@@ -30,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'Title is required',
         },
         notEmpty: {
-          msg: 'Please enter a value for "Title"'
+          msg: "Please enter a value for 'Title'"
         },
       },
     }, 
@@ -42,33 +50,17 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'Description is required',
         },
         notEmpty: {
-          msg: 'Please enter a value for "Description"',
+          msg: "Please enter a value for 'Description'",
         },
       },
     },
     estimatedTime: {
       type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: 'Estimate Time is required',
-          },
-          notEmpty: {
-            msg: 'Please enter a value for "Estimated Time"',
-          },
-      },
+      allowNull: true,
     },
     materialsNeeded: {
       type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: 'Materials Needed is required',
-        },
-        notEmpty: {
-          msg: 'Please enter a value for "Materials Needed"',
-        },
-      } 
+      allowNull: true,
     }
   }, {
     sequelize,

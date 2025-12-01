@@ -4,28 +4,29 @@ const {User, Course} = require('../models');
 const { authenticateUser } = require('../middleware/auth-user');
 const {asyncHandler} = require('../middleware/async-handler');
 
-
 // Construct a router instance.
 const router = express.Router();
 
 // setup a friendly greeting for the root route
-//good
 router.get('/', (req, res) => {
   res.json({
     message: 'Welcome to the REST API project!',
   });
 });
 
-// happy path = good
+// Return details of the authenticated user
 router.get('/users', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
   
   res.status(200).json({
-    user
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    emailAddress: user.emailAddress,
   });
 }));
 
-// happy path = good
+// Create new user as long as required fields are provided
 router.post('/users', asyncHandler(async (req, res) =>{
   const user = req.body;
   
@@ -46,10 +47,10 @@ router.post('/users', asyncHandler(async (req, res) =>{
   }  
 }));
 
-// happy path = good
+// Get list of all courses including the user
 router.get('/courses', asyncHandler(async (req, res) => {
   const courses = await Course.findAll({
-    order: [[ 'createdAt', ' DESC']],
+    order: [[ "createdAt", "DESC"]],
     attributes: { exclude: ['createdAt', 'updatedAt'] },
     include: [
       {
@@ -58,10 +59,10 @@ router.get('/courses', asyncHandler(async (req, res) => {
       },
     ],
   });
-  console.log(courses);
-    res.status(200).json(courses);
+  res.status(200).json(courses);
 }));
 
+//Get specific course by ID including user
 router.get('/courses/:id', asyncHandler(async (req, res) => {
   const course = await Course.findByPk(req.params.id, {
     attributes: {exclude: ['createdAt', 'updatedAt'] },
@@ -72,12 +73,13 @@ router.get('/courses/:id', asyncHandler(async (req, res) => {
   });
   
   if (course) {
-    res.status(200).json({ course });
+    res.status(200).json(course);
   } else {
     res.sendStatus(404);
   }
 }));
 
+// Add new course as long as required fields are provided
 router.post('/courses', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
   let course;
@@ -87,32 +89,31 @@ router.post('/courses', authenticateUser, asyncHandler(async (req, res) => {
     res.status(201).location(`/courses/${course.id}`).end();
   } catch (error) {
     if (error.name = 'SequelizeValidationError') {
-      const errors = error.errors.map( err => err.message);
+      const errors = error.errors.map(err => err.message);
       res.status(400).json( {errors} );
     } else {
       throw error;
     }
   }
-})
-);
-  //     title: req.body.title,
-  //     description: req.body.description,
-  //     estimatedTime: req.body.estimatedTime,
-  //     materialsNeeded: req.body.materialsNeeded,
-  // });
+}));
 
+//Update course by ID if authenticated user is the owner
 router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
-  const userId = user.id;
   let course;
 
   try {
     course = await Course.findByPk(req.params.id);
+    
     if (course) {
+      if (course.userId !== user.id) {
+        res.sendStatus(403).end()
+      }
+    
       await course.update(req.body);
       res.status(204).location(`/courses/${course.id}`).end();
     } else {
-      res.sendStatus(403);
+      res.sendStatus(403).end();
     }
   } catch (error) {
     if (error.name === 'SequelizeValidationError') {
@@ -124,16 +125,21 @@ router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
   }
 }));
 
+// Delete course by ID if authenticated user is the owner
 router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
   const user = req.currentUser;
   let course;
   
   course = await Course.findByPk(req.params.id);
   if (course) {
+    if (course.userId !== user.id) {
+      res.sendStatus(403).end();
+    }
+        
     await course.destroy();
-    req.status(204).end();
+    res.sendStatus(204).end();
   } else {
-    res.status(403).end();
+      res.sendStatus(404).end();
   }
 }));
 

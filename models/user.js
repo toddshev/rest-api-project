@@ -17,6 +17,7 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Course);
     }
   }
+
   User.init({
     firstName: {
       type: DataTypes.STRING,
@@ -27,9 +28,10 @@ module.exports = (sequelize, DataTypes) => {
         },
         notEmpty: {
           msg: 'Please enter a value for "First Name"',
-        }
+        },
       },
     },
+
     lastName: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -38,38 +40,43 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'Last Name is required',
         },
         notEmpty: {
-          msg: 'Please enter a value for "last name"',
+          msg: 'Please enter a value for "Last Name"',
         },
       }, 
     },
+
     emailAddress: {
       type: DataTypes.STRING,
-      isEmail: {
-        msg: 'Please enter a valid email address',
+      allowNull: false,
+      unique: true,
+      validate: {  
+        isEmail: {
+          msg: 'Please enter a valid email address',
+        },
+        notNull: {
+          msg: 'Email Address is required',
+        },
+        notEmpty: {
+          msg: 'Please enter a value for Email Address'
+        },
       },
     },
+
     password: {
       type: DataTypes.STRING,
+      allowNull: false,
+       validate: {
+         notNull: {
+           msg: 'Password is required',
+          },
+          notEmpty: {
+            msg: 'Please enter a value for "Password"',
+          },
+        },
       set(val){
-        //if (val === this.password) {
-          const hashedPassword = bcrypt.hashSync(val, 10);
-          this.setDataValue('password', hashedPassword);
-        //} else {
-         // throw new Error('Password is required');
-        //}
+        const hashedPassword = bcrypt.hashSync(val, 10);
+        this.setDataValue('password', hashedPassword);
       },
-      // allowNull: false,
-      //  validate: {
-      //    notNull: {
-      //      msg: 'Password is required',
-      //      //msg: 'Passwords must match',
-      //      },
-      //     len: {
-      //         args: [6,22],
-      //         msg: 'Please ensure password is between 6 and 22 characters',
-      //     },
-      // },
-      
     },
   }, {
     sequelize,
